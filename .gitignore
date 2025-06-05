@@ -33,3 +33,7 @@ Thumbs.db     # Windows thumbnail cache
 *.iml
 *.ipr
 *.iws
+<<<<<<< HEAD
+=======
+*
+>>>>>>> c92e58e7496550f31596dd3a677fb2ce103c5173
