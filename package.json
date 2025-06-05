@@ -1,0 +1,13 @@
+{
+  "name": "hybrid-thinking-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "packages/core-libs/common-types",
+    "services/api-gateway",
+    "apps/browser-extension",
+    "apps/web-app",
+    "cli"
+  ]
+}
