@@ -1,124 +1,145 @@
-import React, { useState, useEffect, useRef } from 'react';
-import socket from '../services/socket';
+import React, { useState, useEffect } from "react";
+import socketClient from "../services/socket";
 
-const modelsList = ['claude-sonnet', 'gemini-pro'];
+const AVAILABLE_MODELS = [
+  { id: "claude-sonnet", label: "Claude Sonnet" },
+  { id: "gemini-pro", label: "Gemini Pro" },
+  { id: "chatgpt-browser", label: "ChatGPT (Browser)" },
+];
+
+interface ModelResult {
+  modelId: string;
+  text: string;
+}
+
+interface JobCompleted {
+  jobId: string;
+  finalState: any; // Replace with your HybridJobState type when available
+}
 
 const Dashboard: React.FC = () => {
-  const [connected, setConnected] = useState(false);
-  const [promptText, setPromptText] = useState('');
-  const [requestedModels, setRequestedModels] = useState<string[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
-  const logRef = useRef<HTMLDivElement>(null);
+  const [promptText, setPromptText] = useState("");
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [results, setResults] = useState<ModelResult[]>([]);
+  const [finalSynthesis, setFinalSynthesis] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
-    function onConnect() {
-      setConnected(true);
-      setLogs((l) => [...l, '[socket] Connected']);
-    }
-    function onDisconnect() {
-      setConnected(false);
-      setLogs((l) => [...l, '[socket] Disconnected']);
-    }
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('job:model_result', (data) => {
-      setLogs((l) => [...l, `[model_result] ${JSON.stringify(data)}`]);
+    // 1) Connect WebSocket when component mounts
+    socketClient.connect();
+
+    // 2) Subscribe to model results
+    const unsubscribeModel = socketClient.subscribeModelResult((payload) => {
+      setResults((prev) => [
+        ...prev,
+        { modelId: payload.modelId, text: payload.response.content },
+      ]);
     });
-    socket.on('job:synthesis_result', (data) => {
-      setLogs((l) => [...l, `[synthesis_result] ${JSON.stringify(data)}`]);
+
+    // 3) Subscribe to job completion
+    const unsubscribeJob = socketClient.subscribeJobCompleted((payload) => {
+      // For simplicity, assume payload.finalState.synthesisResult.content is the synthesized text
+      const synth = payload.finalState.synthesisResult?.content || "[No synthesis]";
+      setFinalSynthesis(synth);
+      setIsRunning(false);
     });
-    socket.on('job:completed', (data) => {
-      setLogs((l) => [...l, `[completed] ${JSON.stringify(data)}`]);
-    });
+
+    // Cleanup on unmount
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('job:model_result');
-      socket.off('job:synthesis_result');
-      socket.off('job:completed');
+      unsubscribeModel();
+      unsubscribeJob();
+      socketClient.disconnect();
     };
   }, []);
 
-  useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
+  const handleCheckbox = (modelId: string) => {
+    setSelectedModels((prev) =>
+      prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]
+    );
+  };
+
+  const handleRun = () => {
+    if (!promptText.trim() || selectedModels.length === 0) {
+      alert("Please enter a prompt and select at least one model.");
+      return;
     }
-  }, [logs]);
-
-  const handleConnect = () => {
-    socket.connect();
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptText || requestedModels.length === 0) return;
-    // [TODO: replace 'web-user' with real auth once built]
-    socket.emit('job:run:prompt', {
-      userId: 'web-user',
-      promptText,
-      requestedModels,
-    });
-    setLogs((l) => [...l, `emit job:run:prompt with prompt: ${promptText}`]);
-  };
-
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = Array.from(e.target.selectedOptions, (option) => option.value);
-    setRequestedModels(selected);
+    setIsRunning(true);
+    setResults([]);
+    setFinalSynthesis(null);
+    // Send the run:prompt event
+    socketClient.runPrompt("web-user", promptText, selectedModels);
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: '2rem auto', fontFamily: 'system-ui' }}>
-      <h2>Hybrid Thinking Dashboard</h2>
-      {!connected ? (
-        <button onClick={handleConnect}>Connect</button>
-      ) : (
-        <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
-          <div>
-            <label>Prompt:</label>
-            <br />
-            <textarea
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              rows={3}
-              style={{ width: '100%' }}
-              placeholder="Enter your prompt here..."
+    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
+      <h1>Hybrid Thinking Dashboard</h1>
+
+      {/* Prompt Input */}
+      <div>
+        <label>
+          Prompt:
+          <textarea
+            rows={4}
+            style={{ width: "100%", marginTop: "8px" }}
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            disabled={isRunning}
+          />
+        </label>
+      </div>
+
+      {/* Model Selection */}
+      <div style={{ marginTop: "16px" }}>
+        <p>Select Models:</p>
+        {AVAILABLE_MODELS.map((model) => (
+          <label key={model.id} style={{ display: "block" }}>
+            <input
+              type="checkbox"
+              value={model.id}
+              checked={selectedModels.includes(model.id)}
+              onChange={() => handleCheckbox(model.id)}
+              disabled={isRunning}
             />
-          </div>
-          <div style={{ margin: '12px 0' }}>
-            <label>Models:</label>
-            <br />
-            <select
-              multiple
-              value={requestedModels}
-              onChange={handleModelChange}
-              style={{ width: '100%', height: 60 }}
-            >
-              {modelsList.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button type="submit">Run Job</button>
-        </form>
-      )}
-      <div
-        ref={logRef}
-        style={{
-          background: '#222',
-          color: '#fff',
-          padding: 12,
-          borderRadius: 6,
-          height: 200,
-          overflowY: 'auto',
-          fontSize: 13,
-        }}
-      >
-        {logs.map((line, i) => (
-          <div key={i}>{line}</div>
+            {model.label}
+          </label>
         ))}
       </div>
+
+      {/* Run Button */}
+      <button
+        onClick={handleRun}
+        disabled={isRunning}
+        style={{
+          marginTop: "16px",
+          padding: "8px 16px",
+          fontSize: "16px",
+          cursor: isRunning ? "not-allowed" : "pointer",
+        }}
+      >
+        {isRunning ? "Running..." : "Run Job"}
+      </button>
+
+      {/* Model Results */}
+      {results.length > 0 && (
+        <div style={{ marginTop: "24px" }}>
+          <h2>Model Results</h2>
+          <ul>
+            {results.map((res, idx) => (
+              <li key={idx}>
+                <strong>{res.modelId}:</strong> {res.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Final Synthesis */}
+      {finalSynthesis && (
+        <div style={{ marginTop: "24px" }}>
+          <h2>Final Synthesis</h2>
+          <p>{finalSynthesis}</p>
+        </div>
+      )}
     </div>
   );
 };
