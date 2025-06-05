@@ -4,7 +4,7 @@
 import { Command } from 'commander';
 // Use package entrypoints for types only, import classes from built dist paths
 import { HybridJobState } from '@hybrid-thinking/common-types';
-import { WorkflowEngine, ClaudeAdapter, GeminiAdapter, ChatGPTBrowserAdapter } from '@hybrid-thinking/api-gateway';
+import { WorkflowEngine, ClaudeAdapter, GeminiAdapter, ChatGPTBrowserAdapter } from '@hybrid-thinking/engine';
 import * as fs from 'fs/promises';
 
 const program = new Command();

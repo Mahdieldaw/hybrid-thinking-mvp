@@ -1,0 +1,15 @@
+{
+  "name": "@hybrid-thinking/engine",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@hybrid-thinking/common-types": "1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.4"
+  }
+}

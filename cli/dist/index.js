@@ -26,7 +26,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Use package entrypoints for imports
 const commander_1 = require("commander");
-const api_gateway_1 = require("@hybrid-thinking/api-gateway");
+const engine_1 = require("@hybrid-thinking/engine");
 const fs = __importStar(require("fs/promises"));
 const program = new commander_1.Command();
 program
@@ -43,15 +43,15 @@ program
     // Use a new Map for adapters
     const adapters = new Map();
     if (process.env.CLAUDE_API_KEY) {
-        adapters.set('claude-sonnet', new api_gateway_1.ClaudeAdapter(process.env.CLAUDE_API_KEY));
+        adapters.set('claude-sonnet', new engine_1.ClaudeAdapter(process.env.CLAUDE_API_KEY));
     }
     if (process.env.GEMINI_API_KEY) {
-        adapters.set('gemini-pro', new api_gateway_1.GeminiAdapter(process.env.GEMINI_API_KEY));
+        adapters.set('gemini-pro', new engine_1.GeminiAdapter(process.env.GEMINI_API_KEY));
     }
     if (process.env.EXTENSION_ID) {
-        adapters.set('chatgpt-browser', new api_gateway_1.ChatGPTBrowserAdapter(process.env.EXTENSION_ID));
+        adapters.set('chatgpt-browser', new engine_1.ChatGPTBrowserAdapter(process.env.EXTENSION_ID));
     }
-    const engine = new api_gateway_1.WorkflowEngine(adapters);
+    const engine = new engine_1.WorkflowEngine(adapters);
     const models = options.models.split(',').map((m) => m.trim());
     console.log(`Running hybrid prompt across: ${models.join(', ')}`);
     console.log(`Prompt: ${options.prompt}\n`);

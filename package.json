@@ -5,12 +5,13 @@
   "license": "MIT",
   "workspaces": [
     "packages/core-libs/common-types",
+    "packages/core-libs/engine",
     "services/api-gateway",
     "apps/browser-extension",
     "apps/web-app",
     "cli"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core-libs/common-types && npm run build -w services/api-gateway && npm run build -w apps/browser-extension && npm run build -w apps/web-app && npm run build -w cli"
+    "build": "npm run build -w packages/core-libs/common-types && npm run build -w packages/core-libs/engine && npm run build -w services/api-gateway && npm run build -w apps/browser-extension && npm run build -w apps/web-app && npm run build -w cli"
   }
 }
