@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Hybrid Thinking",
+  "version": "1.0.0",
+  "description": "Intelligence orchestration platform for multiple AI models",
+  "permissions": [
+    "tabs",
+    "storage",
+    "webNavigation",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://perplexity.ai/*",
+    "https://bard.google.com/*",
+    "https://api.hybridthinking.ai/*"
+    // [TODO: adjust host_permissions as needed]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chat.openai.com/*"],
+      "js": ["content-scripts/chatgpt.js"]
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content-scripts/claude.js"]
+    },
+    {
+      "matches": ["https://perplexity.ai/*"],
+      "js": ["content-scripts/perplexity.js"]
+    },
+    {
+      "matches": ["https://bard.google.com/*"],
+      "js": ["content-scripts/bard.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}
