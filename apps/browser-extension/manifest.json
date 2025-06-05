@@ -11,31 +11,24 @@
   ],
   "host_permissions": [
     "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
     "https://claude.ai/*",
-    "https://perplexity.ai/*",
-    "https://bard.google.com/*",
+    "https://gemini.google.com/*",
     "https://api.hybridthinking.ai/*"
-    // [TODO: adjust host_permissions as needed]
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://chat.openai.com/*"],
-      "js": ["content-scripts/chatgpt.js"]
-    },
-    {
-      "matches": ["https://claude.ai/*"],
-      "js": ["content-scripts/claude.js"]
-    },
-    {
-      "matches": ["https://perplexity.ai/*"],
-      "js": ["content-scripts/perplexity.js"]
-    },
-    {
-      "matches": ["https://bard.google.com/*"],
-      "js": ["content-scripts/bard.js"]
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
