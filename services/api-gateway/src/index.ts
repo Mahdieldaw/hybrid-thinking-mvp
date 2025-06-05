@@ -31,11 +31,18 @@ app.post('/api/v1/tokens', validateJWT, async (req, res) => {
   }
 });
 
+interface TokenSummary {
+  providerId: string;
+  type: string;
+  isValid: boolean;
+  lastChecked?: string;
+}
+
 app.get('/api/v1/tokens', validateJWT, async (req, res) => {
   try {
     const userId = req.query.userId as string;
     // [TODO: Implement TokenVaultService.listTokens]
-    const tokens = [];
+    const tokens: TokenSummary[] = [];
     res.json({ tokens });
   } catch (error) {
     res.status(500).json({ error: 'Failed to list tokens' });
@@ -94,7 +101,11 @@ io.on('connection', (socket) => {
           socket.emit('job:model_result', {
             jobId,
             modelId,
-            response: { text: `Sample response from ${modelId}` }
+            response: {
+              content: `Sample response from ${modelId}`,
+              provider: modelId.split('-')[0],
+              model: modelId
+            }
           });
         }, 1000);
       });
@@ -107,7 +118,11 @@ io.on('connection', (socket) => {
             status: 'completed',
             results: requestedModels.map(modelId => ({
               modelId,
-              response: { text: `Final response from ${modelId}` }
+              response: {
+                content: `Final response from ${modelId}`,
+                provider: modelId.split('-')[0],
+                model: modelId
+              }
             }))
           }
         });

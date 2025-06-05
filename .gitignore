@@ -1,1 +1,36 @@
 node_modules
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?       # 32-bit Windows backup files
+
+# Package directories
+package-lock.json
+yarn.lock
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes       # macOS trash folder
+ehthumbs.db   # Windows thumbnail cache
+Thumbs.db     # Windows thumbnail cache
+
+# IDE directories and files
+.idea
+*.iml
+*.ipr
+*.iws
+*
