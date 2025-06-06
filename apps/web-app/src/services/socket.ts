@@ -34,7 +34,7 @@ class WebSocketClient {
       this.socket = null;
     });
 
-    this.socket.on("job:model_result", (payload: ModelResultPayload) => {
+    this.socket.on("job:model:result", (payload: ModelResultPayload) => {
       console.log("Received model result:", payload);
       this._modelResultListeners.forEach((cb) => cb(payload));
     });

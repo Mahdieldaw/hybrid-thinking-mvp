@@ -17,7 +17,7 @@
     "https://api.hybridthinking.ai/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.bundle.js"
   },
   "content_scripts": [
     {
@@ -27,7 +27,7 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*"
       ],
-      "js": ["src/content.js"],
+      "js": ["dist/content.bundle.js"],
       "run_at": "document_idle"
     }
   ],

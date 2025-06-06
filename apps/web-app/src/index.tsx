@@ -1,9 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import App from './App'; // Added import for App
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
-    <div>Hybrid Thinking Web App</div>
+    <App /> {/* Replaced div with App component */}
   </React.StrictMode>
 );

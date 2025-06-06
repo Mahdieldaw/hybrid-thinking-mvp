@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
-// Use package entrypoints for imports
 import { Command } from 'commander';
-// Use package entrypoints for types only, import classes from built dist paths
 import { HybridJobState } from '@hybrid-thinking/common-types';
-import { WorkflowEngine, ClaudeAdapter, GeminiAdapter, ChatGPTBrowserAdapter } from '@hybrid-thinking/engine';
 import * as fs from 'fs/promises';
+import { io } from 'socket.io-client';
 
 const program = new Command();
 
@@ -16,55 +14,61 @@ program
 
 program
   .command('run')
-  .description('Run a hybrid prompt across multiple models')
+  .description('Run a hybrid prompt across multiple models via the API Gateway')
   .requiredOption('-p, --prompt <prompt>', 'The prompt to execute')
   .option('-m, --models <models>', 'Comma-separated list of models', 'claude-sonnet,gemini-pro')
   .option('-o, --output <file>', 'Output file (markdown format)')
   .action(async (options) => {
-    // Use a new Map for adapters
-    const adapters = new Map();
-    if (process.env.CLAUDE_API_KEY) {
-      adapters.set('claude-sonnet', new ClaudeAdapter(process.env.CLAUDE_API_KEY));
-    }
-    if (process.env.GEMINI_API_KEY) {
-      adapters.set('gemini-pro', new GeminiAdapter(process.env.GEMINI_API_KEY));
-    }
-    if (process.env.EXTENSION_ID) {
-      adapters.set('chatgpt-browser', new ChatGPTBrowserAdapter(process.env.EXTENSION_ID));
-    }
-    const engine = new WorkflowEngine(adapters);
-
     const models = options.models.split(',').map((m: string) => m.trim());
+    const socket = io('ws://localhost:4000');
 
-    console.log(`Running hybrid prompt across: ${models.join(', ')}`);
-    console.log(`Prompt: ${options.prompt}\n`);
+    let finalJobState: HybridJobState | null = null;
 
-    try {
-      const job = await engine.runHybridPrompt('cli-user', options.prompt, models);
+    socket.on('connect', () => {
+      console.log('Connected to API Gateway...');
+      console.log(`Running hybrid prompt across: ${models.join(', ')}`);
+      console.log(`Prompt: ${options.prompt}\n`);
+      
+      socket.emit('job:run:prompt', {
+        userId: 'cli-user',
+        promptText: options.prompt,
+        requestedModels: models,
+      });
+    });
 
-      // Output results
-      console.log('=== RESULTS ===\n');
-      for (const [modelId, result] of Object.entries(job.results)) {
-        if (result) {
-          console.log(`## ${modelId.toUpperCase()}`);
-          console.log(result);
-          console.log('\n---\n');
-        }
+    socket.on('job:model:result', (payload) => {
+      console.log(`\n--- RESULT FROM: ${payload.modelId} ---`);
+      console.log(payload.response.content);
+      console.log('--------------------------------------\n');
+    });
+
+    socket.on('job:completed', async (payload) => {
+      console.log('\n=== JOB COMPLETED ===');
+      finalJobState = payload.finalState;
+      
+      if (finalJobState?.synthesisResult && 'content' in finalJobState.synthesisResult) {
+        console.log('\n## SYNTHESIS');
+        console.log(finalJobState.synthesisResult.content);
       }
-      if (job.synthesisResult) {
-        console.log('## SYNTHESIS');
-        console.log(job.synthesisResult);
-      }
-      // Save to file if requested
-      if (options.output) {
-        const markdown = generateMarkdownOutput(job);
+
+      if (options.output && finalJobState) {
+        const markdown = generateMarkdownOutput(finalJobState);
         await fs.writeFile(options.output, markdown);
         console.log(`\nOutput saved to: ${options.output}`);
       }
-    } catch (error: any) {
-      console.error('Error:', error.message);
+      
+      socket.disconnect();
+    });
+
+    socket.on('job:synthesis_error', (err) => {
+      console.error('\n[ERROR] Synthesis failed:', err);
+      socket.disconnect();
       process.exit(1);
-    }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from API Gateway.');
+    });
   });
 
 program.parse();
@@ -75,13 +79,20 @@ function generateMarkdownOutput(job: HybridJobState): string {
   output += `**Models:** ${job.requestedModels.join(', ')}\n\n`;
   output += `**Generated:** ${job.createdAt}\n\n`;
   output += `## Individual Model Results\n\n`;
+
   for (const [modelId, result] of Object.entries(job.results)) {
-    if (result) {
-      output += `### ${modelId}\n\n${typeof result === 'string' ? result : JSON.stringify(result)}\n\n`;
+    if (result && 'content' in result) {
+      output += `### ${modelId}\n\n${result.content}\n\n`;
+    } else if (result && 'error' in result) {
+      output += `### ${modelId}\n\n**Error:** ${result.error}\n\n`;
     }
   }
-  if (job.synthesisResult) {
-    output += `## Synthesis\n\n${typeof job.synthesisResult === 'string' ? job.synthesisResult : JSON.stringify(job.synthesisResult)}\n\n`;
+
+  if (job.synthesisResult && 'content' in job.synthesisResult) {
+    output += `## Synthesis\n\n${job.synthesisResult.content}\n\n`;
+  } else if (job.synthesisResult && 'error' in job.synthesisResult) {
+    output += `## Synthesis\n\n**Error:** ${job.synthesisResult.error}\n\n`;
   }
+  
   return output;
 }
