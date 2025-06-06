@@ -1,202 +1,129 @@
-# Browser Extension
+# Hybrid Thinking Browser Extension
 
-## Overview
-
-The Hybrid Thinking browser extension enables any web-based AI to be used as a programmable model within the platform. It serves as a critical component of the Universal Model Access layer, allowing the platform to interact with AI models that don't have public APIs.
+A browser extension that enables interaction with multiple AI models through a unified interface. The extension supports ChatGPT, Claude, and Gemini, allowing seamless communication between these models and the Hybrid Thinking platform.
 
 ## Features
 
-- Automatic detection and registration of web-based AI models
-- DOM manipulation for prompt injection and response extraction
-- WebSocket communication with the Hybrid Thinking backend
-- Session health monitoring and auto-recovery
-- Multi-tab session management
-- User-friendly popup interface for status monitoring
+- **Multi-Model Support**: Integrates with ChatGPT, Claude, and Gemini through their web interfaces.
+- **Real-time Communication**: WebSocket-based communication with the Hybrid Thinking backend.
+- **Session Management**: Tracks active model sessions and their status.
+- **Unified Interface**: Common prompt injection and response handling across different models.
+- **Status Monitoring**: Real-time connection and session status display in the popup.
 
 ## Architecture
 
-The extension follows Chrome's Manifest V3 architecture with the following components:
+The extension follows Chrome's Manifest V3 architecture and consists of several key components:
 
 ```
-browser-extension/
-├── src/
-│   ├── background/     # Background service worker
-│   ├── content/        # Site-specific content scripts
-│   ├── popup/          # Extension popup UI
-│   └── utils/          # Shared utilities
+apps/browser-extension/
+├── public/
+│   ├── icons/          # Extension icons (icon16.png, icon32.png, icon48.png, icon128.png, icon.svg)
+│   ├── popup.html      # HTML for the extension popup
+│   ├── popup.css       # CSS for the extension popup
+│   └── popup.js        # JavaScript for the extension popup
+├── background.js       # Background service worker (ExtensionCoordinator)
+├── content.js          # Unified content script for model interaction
 ├── manifest.json       # Extension manifest
-└── package.json        # Dependencies and scripts
+└── README.md           # This file
 ```
 
-For detailed architecture information, see the [Extension Architecture and Messaging](../docs/architecture/EXTENSION_ARCHITECTURE_AND_MESSAGING.md) document.
+For more detailed architectural information, refer to the main project documentation, particularly `docs/architecture/Extension Architecture and Messaging.md`.
 
-## Content Scripts
+### Background Script (`background.js`)
+- Manages the WebSocket connection with the Hybrid Thinking backend (API Gateway).
+- Routes messages between content scripts, the popup, and the backend.
+- Tracks active model sessions based on information from content scripts and tab events.
+- Handles communication with the popup to display status and session information.
 
-The extension includes site-specific content scripts for various AI platforms:
+### Content Script (`content.js`)
+- A single, unified script injected into supported model websites (ChatGPT, Claude, Gemini).
+- Detects which model's page it is running on.
+- Handles model-specific DOM interaction for:
+    - Injecting prompts received from the background script.
+    - Extracting responses from the model's UI.
+    - Monitoring for response completion.
+- Sends `SESSION_STATUS` (active/inactive) and `PROMPT_RESULT` messages to the background script.
 
-- `chatgpt.js`: For OpenAI's ChatGPT
-- `claude.js`: For Anthropic's Claude
-- `perplexity.js`: For Perplexity
-- `bard.js`: For Google's Bard/Gemini
+### Popup Interface (`public/popup.html`, `public/popup.css`, `public/popup.js`)
+- Displays the connection status to the backend WebSocket.
+- Shows a list of currently active model sessions (e.g., "ChatGPT on Tab 123").
+- Provides basic controls like "Refresh Sessions" and a placeholder "Login" button.
 
-Each content script is responsible for:
-- Locating input elements
-- Injecting prompts
-- Monitoring for responses
-- Extracting completed responses
-- Detecting session validity
+## Development Setup
 
-## Background Script
+1.  **Clone the Repository**: If you haven't already, clone the main Hybrid Thinking project.
+2.  **Navigate to Extension Directory**:
+    ```bash
+    cd path/to/hybrid-thinking-mvp/apps/browser-extension
+    ```
+3.  **Install Dependencies**: This extension currently has no specific build process or npm dependencies beyond what's needed for the overall monorepo (if applicable). The scripts are plain JavaScript.
 
-The background script (`background.js`) serves as the central coordinator, managing:
-
-- WebSocket connection to the Hybrid Thinking backend
-- Tab management for different model sessions
-- Message routing between content scripts and backend
-- Session health monitoring
-
-## Popup UI
-
-The popup UI provides a user-friendly interface for:
-
-- Viewing connection status
-- Managing model sessions
-- Authenticating with the Hybrid Thinking backend
-- Configuring extension settings
-
-## Getting Started
-
-### Prerequisites
-
-- Google Chrome or Microsoft Edge (Chromium-based)
-- Node.js 18 or higher
-- npm or yarn
-
-### Installation for Development
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/hybrid-thinking.git
-
-# Navigate to the browser extension directory
-cd hybrid-thinking/apps/browser-extension
-
-# Install dependencies
-npm install
-
-# Build the extension
-npm run build
-```
-
-### Loading the Extension in Chrome
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top-right corner
-3. Click "Load unpacked" and select the `dist` directory from the build output
-4. The extension should now be installed and visible in your browser toolbar
+4.  **Load the Extension in Chrome/Edge**:
+    *   Open your browser and go to `chrome://extensions/` (for Chrome) or `edge://extensions/` (for Edge).
+    *   Enable "Developer mode" (usually a toggle in the top-right corner).
+    *   Click "Load unpacked".
+    *   Navigate to and select the `apps/browser-extension` directory within your cloned project.
+    *   The extension icon should appear in your browser's toolbar.
 
 ## Configuration
 
-The extension can be configured through the popup UI or by editing the configuration file:
+### Model Host Mapping (`background.js`)
+   The `background.js` script contains `PROVIDER_HOST_MAP` which maps abstract model IDs (e.g., `browser:chatgpt`) to the hostnames of the AI services. This is used for routing messages to the correct content script instances.
+   ```javascript
+   const PROVIDER_HOST_MAP = {
+     'browser:chatgpt': 'chatgpt.com',
+     'browser:claude': 'claude.ai',
+     'browser:gemini': 'gemini.google.com',
+   };
+   ```
 
-```json
-{
-  "backendUrl": "wss://api.hybridthinking.ai/v1/ws",
-  "modelSettings": {
-    "browser:chatgpt": {
-      "url": "https://chat.openai.com/",
-      "checkInterval": 30000
-    },
-    "browser:claude": {
-      "url": "https://claude.ai/",
-      "checkInterval": 30000
-    },
-    "browser:perplexity": {
-      "url": "https://perplexity.ai/",
-      "checkInterval": 30000
-    }
-  },
-  "sessionCheckInterval": 30000,
-  "reconnectInterval": 5000,
-  "maxReconnectAttempts": 10
-}
-```
+### WebSocket Connection (`background.js`)
+   By default, the extension attempts to connect to the Hybrid Thinking API Gateway WebSocket at `ws://localhost:4000`. This URL is defined in `background.js`:
+   ```javascript
+   const WS_URL = 'ws://localhost:4000';
+   ```
+   Ensure your API Gateway is running and accessible at this address.
 
-## Authentication
+### Manifest Permissions (`manifest.json`)
+   The `manifest.json` file declares necessary permissions, including `tabs`, `storage`, `scripting`, and `host_permissions` for the supported AI model websites and the local WebSocket server.
 
-The extension requires authentication with the Hybrid Thinking backend:
+## Message Protocol (Simplified)
 
-1. Click the extension icon to open the popup
-2. Click "Login" to open the authentication page
-3. Complete the authentication process
-4. The extension will receive and store a JWT token for API access
+*   **Content Script → Background Script**:
+    *   `SESSION_STATUS`: `{ type: 'SESSION_STATUS', modelId: 'browser:chatgpt', isActive: true }`
+    *   `PROMPT_RESULT`: `{ type: 'PROMPT_RESULT', promptId: 'xyz', modelId: 'browser:claude', content: '...', error: null, timestamp: ... }`
 
-## Usage
+*   **Background Script → Content Script** (via WebSocket from backend):
+    *   `INJECT_PROMPT`: `{ type: 'INJECT_PROMPT', providerId: 'browser:gemini', promptId: 'abc', text: 'Translate this...' }` (providerId is the modelId)
+    *   `HEALTH_CHECK`: `{ type: 'HEALTH_CHECK', providerId: 'browser:chatgpt' }`
 
-### Setting Up Model Sessions
+*   **Popup ↔ Background Script**:
+    *   Popup sends `GET_POPUP_DATA` to request current status.
+    *   Background sends `POPUP_DATA_UPDATED` to notify popup of changes in connection or sessions.
+    *   Popup sends `LOGIN_REQUESTED` (currently a placeholder).
 
-1. Log in to each AI platform (ChatGPT, Claude, etc.) in separate tabs
-2. The extension will automatically detect and register these sessions
-3. The popup UI will show the status of each registered model
+## Development Guidelines
 
-### Running Prompts
+*   **Adding New Model Support**:
+    1.  Update `PROVIDER_HOST_MAP` in `background.js`.
+    2.  Add new model-specific selectors and handlers in `content.js` under `setupModelSpecificHandlers()` and `getModelSelector()`.
+    3.  Update `host_permissions` and `content_scripts.matches` in `manifest.json`.
+*   **Testing**:
+    *   Ensure the API Gateway is running locally.
+    *   Open tabs for each supported AI model (ChatGPT, Claude, Gemini) and log in if necessary.
+    *   Test prompt injection by sending `job:run:prompt` events through a WebSocket client connected to the API Gateway.
+    *   Verify that responses are correctly extracted and sent back.
+    *   Check the popup for correct connection status and session display.
+    *   Test WebSocket reconnection handling in `background.js`.
+*   **Security**: Be mindful of the permissions requested and the security implications of interacting with third-party websites.
 
-The extension works in the background, responding to prompt requests from the Hybrid Thinking backend:
+## Contributing
 
-1. The backend sends a prompt request via WebSocket
-2. The background script routes the request to the appropriate content script
-3. The content script injects the prompt into the AI interface
-4. The content script monitors for and extracts the response
-5. The response is sent back to the backend via WebSocket
+Contributions are welcome! Please follow the general contribution guidelines for the Hybrid Thinking project.
 
-## Development
+## License
 
-### Project Structure
-
-```
-src/
-├── background/
-│   └── index.ts         # Background script entry point
-├── content/
-│   ├── chatgpt.ts       # ChatGPT-specific content script
-│   ├── claude.ts        # Claude-specific content script
-│   ├── perplexity.ts    # Perplexity-specific content script
-│   └── common.ts        # Shared content script utilities
-├── popup/
-│   ├── index.html       # Popup HTML
-│   ├── index.ts         # Popup script entry point
-│   └── styles.css       # Popup styles
-└── utils/
-    ├── messaging.ts     # Message handling utilities
-    ├── storage.ts       # Storage utilities
-    └── dom.ts           # DOM manipulation utilities
-```
-
-### Build System
-
-The extension uses webpack for building:
-
-```bash
-# Development build with watch mode
-npm run dev
-
-# Production build
-npm run build
-```
-
-### Adding Support for New AI Platforms
-
-To add support for a new AI platform:
-
-1. Create a new content script in the `src/content/` directory
-2. Implement the required functions:
-   - `getInputElement()`: Find the input element
-   - `getSubmitButton()`: Find the submit button
-   - `isOnChatInterface()`: Check if we're on the chat interface
-   - `isResponseComplete()`: Check if the response is complete
-   - `extractResponseText()`: Extract the response text
-3. Add the content script to `manifest.json`
-4. Add the model to the configuration
+This browser extension is part of the Hybrid Thinking project and is typically licensed under the project's main license (e.g., MIT or Apache 2.0). Refer to the root `LICENSE` file for details.
 
 Example:
 
