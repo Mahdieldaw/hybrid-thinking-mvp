@@ -193,5 +193,3 @@ class ExtensionCoordinator {
 // Initialize the coordinator when the background script loads
 const coordinator = new ExtensionCoordinator();
 console.log('ExtensionCoordinator initialized.');
-
-const coordinator = new ExtensionCoordinator();

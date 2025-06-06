@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import socketClient from "../services/socket";
 
 const AVAILABLE_MODELS = [
-  { id: "claude-sonnet", label: "Claude Sonnet" },
+  { id: "claude-3-sonnet-20240229", label: "Claude 3 Sonnet" },
   { id: "gemini-pro", label: "Gemini Pro" },
-  { id: "chatgpt-browser", label: "ChatGPT (Browser)" },
+  { id: "browser:chatgpt", label: "ChatGPT (Browser)" },
 ];
 
 interface ModelResult {

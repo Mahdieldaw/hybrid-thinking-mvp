@@ -2,7 +2,7 @@ import { BaseAdapter } from './BaseAdapter';
 import { ModelResponse, PromptOptions } from '@hybrid-thinking/common-types';
 
 export class ClaudeAdapter extends BaseAdapter {
-  id = 'claude-sonnet';
+  id = 'claude-3-sonnet-20240229';
   type = 'api' as const;
   supportsStreaming = false;
   private apiKey: string;
@@ -22,7 +22,7 @@ export class ClaudeAdapter extends BaseAdapter {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3.5-sonnet-20241022',
+        model: 'claude-3-sonnet-20240229',
         max_tokens: options?.maxTokens || 4096,
         messages: [{ role: 'user', content: prompt }]
       })
